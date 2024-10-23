@@ -111,14 +111,14 @@ class MouseMover:
 
     def start(self):
         while True:
-            self.screen.fill(self.key_color)  # Colore nero trasparente
+            self.screen.fill(self.key_color)
             self.handleQuitEvent()            
             self.mouseController()
             self.loadImage()
             self.loadTime()
             self.primoPiano()
             self.aggiornaPosizione()
-            pygame.display.flip()   #TODO capire cosa fa flip
+            pygame.display.flip()
 
 
     def primoPiano(self):
