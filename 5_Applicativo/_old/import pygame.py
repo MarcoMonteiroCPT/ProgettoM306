@@ -45,7 +45,6 @@ def draw_square(size):
     mouse.move(0, size, absolute=False, duration=0.2)
     mouse.move(-size, 0, absolute=False, duration=0.2)
     mouse.move(0, -size, absolute=False, duration=0.2)
-    mouse.move(size/2, 0, absolute=False, duration=0.2)
 
 
 def draw_circle(radius):
