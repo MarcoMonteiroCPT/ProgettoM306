@@ -1,4 +1,5 @@
 import sys
+import threading
 import time
 import math
 import pygame
@@ -56,6 +57,7 @@ class MouseMover:
         # Ottieni l'handle della finestra
         self.hwnd = pygame.display.get_wm_info()['window']
 
+
         # Imposta la finestra come "layered"
         win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
 
@@ -63,7 +65,8 @@ class MouseMover:
         win32gui.SetLayeredWindowAttributes(self.hwnd, self.key_color_hex, 0, win32con.LWA_COLORKEY)
         # Riempi lo schermo con un colore trasparente
         
-        
+
+
 
 
     def handleQuitEvent(self):
@@ -72,16 +75,6 @@ class MouseMover:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
-    def mouseController(self):
-        if self.posizioneIniziale != pyautogui.position():
-            self.posizioneIniziale = pyautogui.position()
-            self.tempoIniziale = time.time()
-        elif time.time() - self.tempoIniziale > 5:
-            moveMouseSquare(200)
-            time.sleep(1)
-            mouseMoveCircle(10)
-            self.tempoIniziale = time.time()
     
     def loadImage(self):
         # Carica l'immagine con trasparenza
@@ -120,6 +113,7 @@ class MouseMover:
     def start(self):
         self.loadImage()
         while True:
+            clock = pygame.time.Clock()
             self.screen.fill(self.key_color)
             self.handleQuitEvent()            
             self.mouseController()
@@ -128,32 +122,47 @@ class MouseMover:
             self.primoPiano()
             self.aggiornaPosizione()
             pygame.display.flip()
+            clock.tick(60)
+
 
 
     def primoPiano(self):
         # Mantieni la finestra in primo piano
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
+    def mouseController(self):
+        if self.posizioneIniziale != pyautogui.position():
+            self.posizioneIniziale = pyautogui.position()
+            self.tempoIniziale = time.time()
+        elif time.time() - self.tempoIniziale > 5:
+            self.moveMouseSquare()
+            time.sleep(1)
+            self.mouseMoveCircle()
+            self.tempoIniziale = time.time()
+
+    #Animazioni
+    def moveMouseSquare(self):
+        size = 200
+        #Muove il mouse simulando un quadrato
+        mouse.move(size, 0, absolute=False, duration=0.2)
+        mouse.move(0, size, absolute=False, duration=0.2)
+        mouse.move(-size, 0, absolute=False, duration=0.2)
+        mouse.move(0, -size, absolute=False, duration=0.2)
 
 
-#Animazioni
-def moveMouseSquare(size):
-    #Muove il mouse simulando un quadrato
-    mouse.move(size, 0, absolute=False, duration=0.2)
-    mouse.move(0, size, absolute=False, duration=0.2)
-    mouse.move(-size, 0, absolute=False, duration=0.2)
-    mouse.move(0, -size, absolute=False, duration=0.2)
-
-def mouseMoveCircle(radius):
-    # Muove il mouse simulando un cerchio
-    for i in range(0, 360, 5):
-        # Converte in gradi in radianti
-        angle = math.radians(i)
-        # calcola le coordinate x e y
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        # muove il mouse alla posizione calcolata
-        mouse.move(x, y, absolute=False, duration=0.01)
+    def mouseMoveCircle(self):
+        radius = 10
+        # Muove il mouse simulando un cerchio
+        for i in range(0, 360, 5):
+            angle = math.radians(i)
+            # calcola le coordinate x e y
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            # muove il mouse alla posizione calcolata
+            mouse.move(x, y, absolute=False, duration=0.01)
+            self.loadImage()
+            self.loadTime()
+            pygame.display.flip()
 
 
 
