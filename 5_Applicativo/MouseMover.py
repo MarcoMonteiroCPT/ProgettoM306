@@ -86,9 +86,17 @@ class MouseMover:
     def loadImage(self):
         # Carica l'immagine con trasparenza
         self.image = pygame.image.load('image.png').convert_alpha()
+        self.scaleImage()
         # Disegna l'immagine sopra il cursore del mouse
-        self.screen.blit(self.image, (self.mouse_x, self.mouse_y))  # Posiziona sopra il cursore
 
+    def refreshImagePosition(self):
+        self.screen.blit(self.image, (self.mouse_x, self.mouse_y))  # Posiziona sopra il cursore
+    
+    def scaleImage(self):
+        dimensioneDesiderata = 100
+        factor = dimensioneDesiderata/self.image.get_width()
+        self.image = pygame.transform.smoothscale_by(self.image, factor)
+            
     def aggiornaPosizione(self):
         self.mouse_x, self.mouse_y = pyautogui.position()
 
@@ -102,7 +110,7 @@ class MouseMover:
         shadow_surface = self.font.render(current_time, True, (0, 0, 0))  # Contorno: nero
 
         # Posiziona il testo sopra l'immagine
-        text_rect = time_surface.get_rect(center=(self.mouse_x // 2, self.mouse_y - 20))  # 20 pixel sopra l'immagine
+        text_rect = time_surface.get_rect(center=(self.mouse_x + 50, self.mouse_y -20))  # 20 pixel sopra l'immagine
 
         # Disegna il contorno
         self.screen.blit(shadow_surface, text_rect.move(2, 2))  # Contorno leggermente spostato
@@ -110,11 +118,12 @@ class MouseMover:
         self.screen.blit(time_surface, text_rect)
 
     def start(self):
+        self.loadImage()
         while True:
             self.screen.fill(self.key_color)
             self.handleQuitEvent()            
             self.mouseController()
-            self.loadImage()
+            self.refreshImagePosition()
             self.loadTime()
             self.primoPiano()
             self.aggiornaPosizione()
