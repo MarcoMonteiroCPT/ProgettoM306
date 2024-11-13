@@ -68,13 +68,20 @@ class MouseMover:
 
 
 
-
-    def handleQuitEvent(self):
-        # Gestisce la chiusura del programma
+    def handleEvents(self):
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            self.handleQuitEvent(event)
+            self.handleKeydownEvent(event)
+    def handleQuitEvent(self, event):
+        # Gestisce la chiusura del programma
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        
+    def handleKeydownEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                print("Settings")
     
     def loadImage(self):
         # Carica l'immagine con trasparenza
@@ -115,16 +122,18 @@ class MouseMover:
         while True:
             clock = pygame.time.Clock()
             self.screen.fill(self.key_color)
-            self.handleQuitEvent()            
+            self.handleEvents()          
             self.mouseController()
-            self.refreshImagePosition()
-            self.loadTime()
-            self.primoPiano()
-            self.aggiornaPosizione()
-            pygame.display.flip()
+            self.loadAll()
             clock.tick(60)
 
-
+    def loadAll(self):
+        self.screen.fill(self.key_color)
+        self.refreshImagePosition()
+        self.loadTime()
+        self.primoPiano()
+        self.aggiornaPosizione()
+        pygame.display.flip()
 
     def primoPiano(self):
         # Mantieni la finestra in primo piano
@@ -136,7 +145,6 @@ class MouseMover:
             self.tempoIniziale = time.time()
         elif time.time() - self.tempoIniziale > 5:
             self.moveMouseSquare()
-            time.sleep(1)
             self.mouseMoveCircle()
             self.tempoIniziale = time.time()
 
@@ -144,10 +152,18 @@ class MouseMover:
     def moveMouseSquare(self):
         size = 200
         #Muove il mouse simulando un quadrato
-        mouse.move(size, 0, absolute=False, duration=0.2)
-        mouse.move(0, size, absolute=False, duration=0.2)
-        mouse.move(-size, 0, absolute=False, duration=0.2)
-        mouse.move(0, -size, absolute=False, duration=0.2)
+        for i in range(0, size, 1):
+            mouse.move(1, 0, absolute=False, duration=0.001)
+            self.loadAll()
+        for i in range(0, size, 1):
+            mouse.move(0, 1, absolute=False, duration=0.001)
+            self.loadAll()
+        for i in range(0, size, 1):
+            mouse.move(-1, 0, absolute=False, duration=0.001)
+            self.loadAll()
+        for i in range(0, size, 1):
+            mouse.move(0, -1, absolute=False, duration=0.001)
+            self.loadAll()
 
 
     def mouseMoveCircle(self):
@@ -160,9 +176,7 @@ class MouseMover:
             y = radius * math.sin(angle)
             # muove il mouse alla posizione calcolata
             mouse.move(x, y, absolute=False, duration=0.01)
-            self.loadImage()
-            self.loadTime()
-            pygame.display.flip()
+            self.loadAll()
 
 
 
