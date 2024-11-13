@@ -18,6 +18,7 @@ posizioneIniziale = 0
 font = 0
 image = None
 hwnd = 0
+displayingMenu = False
 
 # Classe
 class MouseMover:
@@ -30,7 +31,7 @@ class MouseMover:
 
     mouse_x, mouse_y = pyautogui.position()
     image = None
-    
+    displayingMenu = False
     
     
 
@@ -81,13 +82,22 @@ class MouseMover:
     def handleKeydownEvent(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                print("Settings")
+                self.displayMenu()
     
+    def displayMenu(self):
+        displayingMenu = True
+        
+        while displayingMenu:
+
+            time.sleep(5)
+            displayingMenu = False
+
     def loadImage(self):
         # Carica l'immagine con trasparenza
         self.image = pygame.image.load('image.png').convert_alpha()
         self.scaleImage()
         # Disegna l'immagine sopra il cursore del mouse
+
 
     def refreshImagePosition(self):
         self.screen.blit(self.image, (self.mouse_x, self.mouse_y))  # Posiziona sopra il cursore
