@@ -1,5 +1,4 @@
 import sys
-import threading
 import time
 import math
 import pygame
@@ -7,8 +6,9 @@ import win32gui
 import win32con
 import pyautogui
 import mouse
-
-
+from pystray import Icon, MenuItem, Menu
+from PIL import Image, ImageDraw
+import threading
 
 # Variabili
 screen = 0 
@@ -33,8 +33,6 @@ class MouseMover:
     image = None
     displayingMenu = False
     
-    
-
     def __init__(self):
         # Inizializza Pygame
         pygame.init()
@@ -42,15 +40,10 @@ class MouseMover:
 
         self.setup()
 
-    # Setup
     def setup(self):
-        
         # Ottieni le dimensioni dello schermo primario
         info = pygame.display.Info()
-        
-        width, height = info.current_w, info.current_h
-
-        
+        width, height = info.current_w, info.current_h  
 
         # Crea la finestra senza bordi e con supporto alpha
         self.screen = pygame.display.set_mode((width, height), pygame.NOFRAME | pygame.SRCALPHA)
@@ -58,21 +51,17 @@ class MouseMover:
         # Ottieni l'handle della finestra
         self.hwnd = pygame.display.get_wm_info()['window']
 
-
         # Imposta la finestra come "layered"
         win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
 
         # Imposta la trasparenza dello sfondo
         win32gui.SetLayeredWindowAttributes(self.hwnd, self.key_color_hex, 0, win32con.LWA_COLORKEY)
-        # Riempi lo schermo con un colore trasparente
-        
-
-
 
     def handleEvents(self):
         for event in pygame.event.get():
             self.handleQuitEvent(event)
             self.handleKeydownEvent(event)
+    
     def handleQuitEvent(self, event):
         # Gestisce la chiusura del programma
         if event.type == pygame.QUIT:
@@ -82,22 +71,27 @@ class MouseMover:
     def handleKeydownEvent(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.displayMenu()
+                self.displayingMenu = not self.displayingMenu
+                self.tempoIniziale = time.time()
     
-    def displayMenu(self):
-        displayingMenu = True
-        
-        while displayingMenu:
+    def displayMenu(self):      
+        if self.displayingMenu:
+            info = pygame.display.Info()
+            menu = pygame.image.load('GUI/GUI principale.png')
+            self.screen.blit(menu, (info.current_w/2-300, info.current_h/2-200))
+            self.primoPiano()
+            self.menuController(info)
 
-            time.sleep(5)
-            displayingMenu = False
+    def menuController(self, info):
+        self.aggiornaPosizione()
+        if pygame.mouse.get_pressed()[0]:
+            if (self.mouse_x > info.current_w/2-151 and self.mouse_x < info.current_w/2-24) and (self.mouse_y > info.current_h/2+95 and self.mouse_y < info.current_h/2+143):
+                self.displayingMenu = False
 
     def loadImage(self):
         # Carica l'immagine con trasparenza
         self.image = pygame.image.load('image.png').convert_alpha()
         self.scaleImage()
-        # Disegna l'immagine sopra il cursore del mouse
-
 
     def refreshImagePosition(self):
         self.screen.blit(self.image, (self.mouse_x, self.mouse_y))  # Posiziona sopra il cursore
@@ -112,19 +106,10 @@ class MouseMover:
 
     def loadTime(self):
         current_time = time.strftime("%H:%M:%S")
-
-        # Renderizza il testo dell'ora
         time_surface = self.font.render(current_time, True, (255, 255, 255))  # Colore del testo: bianco
-
-        # Aggiungi un contorno nero per migliorare la visibilità
         shadow_surface = self.font.render(current_time, True, (0, 0, 0))  # Contorno: nero
-
-        # Posiziona il testo sopra l'immagine
         text_rect = time_surface.get_rect(center=(self.mouse_x + 50, self.mouse_y -20))  # 20 pixel sopra l'immagine
-
-        # Disegna il contorno
         self.screen.blit(shadow_surface, text_rect.move(2, 2))  # Contorno leggermente spostato
-        # Disegna il testo principale
         self.screen.blit(time_surface, text_rect)
 
     def start(self):
@@ -133,16 +118,18 @@ class MouseMover:
             clock = pygame.time.Clock()
             self.screen.fill(self.key_color)
             self.handleEvents()          
-            self.mouseController()
+            self.mouseController() 
+            self.displayMenu()
             self.loadAll()
             clock.tick(60)
 
     def loadAll(self):
-        self.screen.fill(self.key_color)
-        self.refreshImagePosition()
-        self.loadTime()
+        if not self.displayingMenu:
+            self.screen.fill(self.key_color)
+            self.refreshImagePosition()
+            self.loadTime()
+            self.aggiornaPosizione()
         self.primoPiano()
-        self.aggiornaPosizione()
         pygame.display.flip()
 
     def primoPiano(self):
@@ -150,15 +137,15 @@ class MouseMover:
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
     def mouseController(self):
-        if self.posizioneIniziale != pyautogui.position():
-            self.posizioneIniziale = pyautogui.position()
-            self.tempoIniziale = time.time()
-        elif time.time() - self.tempoIniziale > 5:
-            self.moveMouseSquare()
-            self.mouseMoveCircle()
-            self.tempoIniziale = time.time()
+        if not self.displayingMenu:
+            if self.posizioneIniziale != pyautogui.position():
+                self.posizioneIniziale = pyautogui.position()
+                self.tempoIniziale = time.time()
+            elif time.time() - self.tempoIniziale > 5:
+                self.moveMouseSquare()
+                self.mouseMoveCircle()
+                self.tempoIniziale = time.time()
 
-    #Animazioni
     def moveMouseSquare(self):
         size = 200
         #Muove il mouse simulando un quadrato
@@ -175,7 +162,6 @@ class MouseMover:
             mouse.move(0, -1, absolute=False, duration=0.001)
             self.loadAll()
 
-
     def mouseMoveCircle(self):
         radius = 10
         # Muove il mouse simulando un cerchio
@@ -189,12 +175,45 @@ class MouseMover:
             self.loadAll()
 
 
+# Funzione per il menu della system tray (opzione "Esci")
+def on_quit(icon, item):
+    print("Chiusura dell'icona tray")
+    icon.stop()
+
+# Funzione per creare l'immagine dell'icona (puoi usare un file .ico o .png)
+def create_image():
+    # Crea una nuova immagine per l'icona (32x32 px)
+    image = Image.new('RGBA', (32, 32), (255, 255, 255, 0))  # Immagine trasparente 32x32 px
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 32, 32), fill="blue")  # Disegna un quadrato blu
+    return image
+
+# Funzione per avviare l'icona nella system tray
+def start_tray():
+    icon_image = create_image()  # Usa l'icona creata dalla funzione
+    icon = Icon("test_icon", icon_image, menu=Menu(MenuItem('Esci', on_quit), MenuItem('Apri menu', self.displayMenu)))
+    icon.run()
+
+# Funzione principale di Pygame
+def pygame_loop():
+    mm = MouseMover()
+    mm.setup()
+    mm.start()
 
 def run():
     mm = MouseMover()
     mm.setup()
     mm.start()
 
-
 if __name__ == "__main__":
-    run()
+    # Esegui il codice pystray nel thread principale
+    tray_thread = threading.Thread(target=start_tray, daemon=True)  # Impostato come daemon per terminare automaticamente
+    pygame_thread = threading.Thread(target=pygame_loop)
+
+    # Avvia i thread
+    tray_thread.start()
+    pygame_thread.start()
+
+    # Attendi che Pygame termini
+    pygame_thread.join()
+    tray_thread.join()

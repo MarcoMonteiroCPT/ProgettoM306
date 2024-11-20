@@ -1,0 +1,1 @@
+inserire icona menu nella system tray
