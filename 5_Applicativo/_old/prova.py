@@ -1,46 +1,61 @@
-import mouse
-import math
-import time
-import time
-import pyautogui
+import pygame
 
-def draw_square(size):
-    # click and hold the left mouse button
-    mouse.press()
-    mouse.move(size, 0, absolute=False, duration=0.2)
-    mouse.move(0, size, absolute=False, duration=0.2)
-    mouse.move(-size, 0, absolute=False, duration=0.2)
-    mouse.move(0, -size, absolute=False, duration=0.2)
-    # release the left mouse button
-    mouse.release()
-    mouse.move(size/2, 0, absolute=False, duration=0.2)
+# Initialize Pygame
+pygame.init()
 
+# Set up the screen
+screen = pygame.display.set_mode((600, 400))
+pygame.display.set_caption("Text Input Example")
 
-def draw_circle(radius):
-    # click and hold the left mouse button
-    mouse.press()
-    # move the mouse in a circle
-    for i in range(0, 360, 5):
-        # convert degrees to radians
-        angle = math.radians(i)
-        # calculate the x and y coordinates
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        # move the mouse to the calculated position
-        mouse.move(x, y, absolute=False, duration=0.01)
-    # release the left mouse button
-    mouse.release()
+# Set up fonts
+font = pygame.font.Font(None, 36)
 
-if __name__ == "__main__":
-    # Place the mouse at the starting point and then call
-    tempoIniziale = time.time()
-    posizioneIniziale = pyautogui.position()
-    while True:
-        if posizioneIniziale != pyautogui.position():
-            posizioneIniziale = pyautogui.position()
-            tempoIniziale = time.time()
-        elif time.time() - tempoIniziale > 5:
-            draw_square(200)
-            time.sleep(1)
-            draw_circle(10)
-            tempoIniziale = time.time()
+# Set up variables
+input_text = ""
+active = False
+input_rect = pygame.Rect(150, 150, 300, 40)  # Position and size of the input box
+
+# Run the game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # Check if the input box was clicked to activate it
+            if input_rect.collidepoint(event.pos):
+                active = True
+            else:
+                active = False
+        
+        if event.type == pygame.KEYDOWN:
+            if active:
+                if event.key == pygame.K_RETURN:
+                    # Press Enter to finalize the input
+                    print("Input text:", input_text)
+                    input_text = ""  # Clear the text after pressing Enter
+                elif event.key == pygame.K_BACKSPACE:
+                    input_text = input_text[:-1]  # Remove the last character
+                else:
+                    input_text += event.unicode  # Add the typed character to the input text
+    
+    # Draw the background
+    screen.fill((255, 255, 255))
+    
+    # Draw the input box (changing color if active)
+    color = (0, 0, 0) if active else (200, 200, 200)
+    pygame.draw.rect(screen, color, input_rect, 2)
+
+    # Render the text
+    text_surface = font.render(input_text, True, (0, 0, 0))
+    screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+
+    # Update the display
+    pygame.display.flip()
+
+    # Limit the frame rate
+    pygame.time.Clock().tick(60)
+
+# Quit Pygame
+pygame.quit()
