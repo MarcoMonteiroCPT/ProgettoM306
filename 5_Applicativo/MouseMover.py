@@ -13,53 +13,44 @@ import threading
 
 # Class
 class MouseMover: 
-
     # Variables
     key_color_hex = 0x010101 # Key color to make transparent
     key_color = (1, 1, 1, 0)
-    tempoIniziale = time.time()
-    posizioneIniziale = pyautogui.position()
+    initialTime = time.time()
+    initialPosition = pyautogui.position()
     mouse_x, mouse_y = pyautogui.position()
     image = None
     displayingMenu = False
     icon = None
     running = False
     temporalOffset = 5
+    runningAnimation = False
 
 
     # Constructor
-    def __init__(self):
-        # Initialize Pygame
-        pygame.init()
+    def __init__(self):     
+        pygame.init() # Initialize Pygame
         self.font = pygame.font.Font(None, 36)
         self.setup()
 
 
     # Setup
-    def setup(self):
-        # Get the primary screen dimensions
-        info = pygame.display.Info()
+    def setup(self):   
+        info = pygame.display.Info() # Get the primary screen dimensions
         width, height = info.current_w, info.current_h
+  
+        self.screen = pygame.display.set_mode((width, height), pygame.NOFRAME | pygame.SRCALPHA) # Create a borderless window with alpha support
 
-        # Create a borderless window with alpha support
-        self.screen = pygame.display.set_mode((width, height), pygame.NOFRAME | pygame.SRCALPHA)
+        self.hwnd = pygame.display.get_wm_info()['window'] # Get the window handle
 
-        # Get the window handle
-        self.hwnd = pygame.display.get_wm_info()['window']
+        
+        win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED) # Set the window as "layered"
+        win32gui.SetLayeredWindowAttributes(self.hwnd, self.key_color_hex, 0, win32con.LWA_COLORKEY) # Set the background transparency
 
-        # Set the window as "layered"
-        win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
-
-        # Set the background transparency
-        win32gui.SetLayeredWindowAttributes(self.hwnd, self.key_color_hex, 0, win32con.LWA_COLORKEY)
-
-        # Hide the icon from the taskbar
         self.hide_window_icon()
-
         self.running = True
 
-    def primoPiano(self):
-        # Keep the window on top
+    def setToForeground(self):
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
     
 
@@ -82,11 +73,13 @@ class MouseMover:
             info = pygame.display.Info()
             menu = pygame.image.load('GUI/GUI principale.png')
             self.screen.blit(menu, (info.current_w / 2 - 300, info.current_h / 2 - 200))
-            self.primoPiano()
+            temporalOffsetText = self.font.render(str(self.temporalOffset), True, (136,136,136))
+            self.screen.blit(temporalOffsetText, (info.current_w / 2 + 110, info.current_h / 2 - 45))
+            self.setToForeground()
             self.menuController(info)
 
     def menuController(self, info):
-        self.aggiornaPosizione()
+        self.refreshMousePosition()
         if pygame.mouse.get_pressed()[0]:
             # Resume
             if (self.mouse_x > info.current_w / 2 - 151 and self.mouse_x < info.current_w / 2 - 24) and (self.mouse_y > info.current_h / 2 + 95 and self.mouse_y < info.current_h / 2 + 143):
@@ -97,7 +90,31 @@ class MouseMover:
                 self.on_quit()
             # Temporal offset
             elif (self.mouse_x > info.current_w / 2 + 86 and self.mouse_x < info.current_w / 2 + 160) and (self.mouse_y > info.current_h / 2 -53 and self.mouse_y < info.current_h / 2 - 19):
-                print("Ciao")
+                self.handleInput(info, True)
+
+    def handleInput(self, info, typing):
+        input_text = ""
+        active = True
+        input_rect = pygame.Rect(info.current_w / 2 + 105, info.current_h / 2 - 52, 50, 30)
+        while typing:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if active:
+                        if event.key == pygame.K_RETURN:
+                            self.temporalOffset = int(input_text)
+                            typing = False
+                        elif event.key == pygame.K_BACKSPACE:
+                            input_text = input_text[:-1]  # Remove the last character
+                        elif len(input_text) < 2:
+                            input_text += event.unicode  # Add the typed character to the input text
+            if active:
+                menu = pygame.image.load('GUI/GUI principaleInput.png')
+                self.screen.blit(menu, (info.current_w / 2 - 300, info.current_h / 2 - 200))
+            color = (123,141,147) if active else (207,216,220)
+            pygame.draw.rect(self.screen, color, input_rect)
+            text_surface = self.font.render(input_text, True, (0,0,0))
+            self.screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+            pygame.display.flip()   
 
 
     # Hide/Show window
@@ -115,18 +132,19 @@ class MouseMover:
 
 
     # Mouse
-    def aggiornaPosizione(self):
+    def refreshMousePosition(self):
         self.mouse_x, self.mouse_y = pyautogui.position()
 
     def mouseController(self):
         if not self.displayingMenu:
-            if self.posizioneIniziale != pyautogui.position():
-                self.posizioneIniziale = pyautogui.position()
-                self.tempoIniziale = time.time()
-            elif time.time() - self.tempoIniziale > self.temporalOffset:
+            if self.initialPosition != pyautogui.position():
+                self.initialPosition = pyautogui.position()
+                self.initialTime = time.time()
+            elif time.time() - self.initialTime > self.temporalOffset:
+                self.runningAnimation = True
                 self.moveMouseSquare()
                 self.mouseMoveCircle()
-                self.tempoIniziale = time.time()
+                self.initialTime = time.time()
 
 
     # Image
@@ -176,22 +194,40 @@ class MouseMover:
         size = 200
         # Moves the mouse simulating a square
         for i in range(0, size, 1):
+            if not self.runningAnimation:
+                break
             mouse.move(1, 0, absolute=False, duration=0.001)
             self.loadAll()
+            self.isInterrupted(self.mouse_x, self.mouse_y)
+            
         for i in range(0, size, 1):
+            if not self.runningAnimation:
+                break
             mouse.move(0, 1, absolute=False, duration=0.001)
             self.loadAll()
+            self.isInterrupted(self.mouse_x, self.mouse_y)
+            
         for i in range(0, size, 1):
+            if not self.runningAnimation:
+                break
             mouse.move(-1, 0, absolute=False, duration=0.001)
             self.loadAll()
+            self.isInterrupted(self.mouse_x, self.mouse_y)
+            
         for i in range(0, size, 1):
+            if not self.runningAnimation:
+                break
             mouse.move(0, -1, absolute=False, duration=0.001)
             self.loadAll()
+            self.isInterrupted(self.mouse_x, self.mouse_y)
+
 
     def mouseMoveCircle(self):
         radius = 10
         # Moves the mouse simulating a circle
         for i in range(0, 360, 5):
+            if not self.runningAnimation:
+                break
             angle = math.radians(i)
             # calculates the x and y coordinates
             x = radius * math.cos(angle)
@@ -199,6 +235,13 @@ class MouseMover:
             # moves the mouse to the calculated position
             mouse.move(x, y, absolute=False, duration=0.01)
             self.loadAll()
+            self.isInterrupted(self.mouse_x, self.mouse_y)  
+
+
+    def isInterrupted(self, lastX, lastY):
+        self.refreshMousePosition()
+        if self.mouse_x != lastX or self.mouse_y != lastY:
+            self.runningAnimation = False
 
 
     # Running
@@ -218,8 +261,8 @@ class MouseMover:
             self.screen.fill(self.key_color)
             self.refreshImagePosition()
             self.loadTime()
-            self.aggiornaPosizione()
-        self.primoPiano()
+            self.refreshMousePosition()
+        self.setToForeground()
         pygame.display.flip()
 
     
