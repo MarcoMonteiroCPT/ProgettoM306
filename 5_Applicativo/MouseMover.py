@@ -9,6 +9,9 @@ import mouse
 from pystray import Icon, MenuItem, Menu
 from PIL import Image, ImageDraw
 import threading
+import tkinter as tk
+from tkinter import filedialog
+import os
 
 
 # Class
@@ -19,13 +22,14 @@ class MouseMover:
     initialTime = time.time()
     initialPosition = pyautogui.position()
     mouse_x, mouse_y = pyautogui.position()
-    image = None
     displayingMenu = False
     icon = None
     running = False
     temporalOffset = 5
     runningAnimation = False
-
+    cursor = None
+    cursorPath = "image.png"
+    showingCursorSelector = False
 
     # Constructor
     def __init__(self):     
@@ -42,7 +46,6 @@ class MouseMover:
         self.screen = pygame.display.set_mode((width, height), pygame.NOFRAME | pygame.SRCALPHA) # Create a borderless window with alpha support
 
         self.hwnd = pygame.display.get_wm_info()['window'] # Get the window handle
-
         
         win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED) # Set the window as "layered"
         win32gui.SetLayeredWindowAttributes(self.hwnd, self.key_color_hex, 0, win32con.LWA_COLORKEY) # Set the background transparency
@@ -74,7 +77,10 @@ class MouseMover:
             menu = pygame.image.load('GUI/GUI principale.png')
             self.screen.blit(menu, (info.current_w / 2 - 300, info.current_h / 2 - 200))
             temporalOffsetText = self.font.render(str(self.temporalOffset), True, (136,136,136))
-            self.screen.blit(temporalOffsetText, (info.current_w / 2 + 110, info.current_h / 2 - 45))
+            if self.temporalOffset < 10:
+                self.screen.blit(temporalOffsetText, (info.current_w / 2 + 115, info.current_h / 2 - 45))
+            else:
+                self.screen.blit(temporalOffsetText, (info.current_w / 2 + 109, info.current_h / 2 - 45))
             self.setToForeground()
             self.menuController(info)
 
@@ -91,29 +97,35 @@ class MouseMover:
             # Temporal offset
             elif (self.mouse_x > info.current_w / 2 + 86 and self.mouse_x < info.current_w / 2 + 160) and (self.mouse_y > info.current_h / 2 -53 and self.mouse_y < info.current_h / 2 - 19):
                 self.handleInput(info, True)
+            # Cursor
+            elif (self.mouse_x > info.current_w / 2 - 142 and self.mouse_x < info.current_w / 2 - 33) and (self.mouse_y > info.current_h / 2 + 23 and self.mouse_y < info.current_h / 2 + 54):
+                self.hide_window_icon()
+                self.displayingMenu = False
+                self.showingCursorSelector = True
 
     def handleInput(self, info, typing):
         input_text = ""
-        active = True
         input_rect = pygame.Rect(info.current_w / 2 + 105, info.current_h / 2 - 52, 50, 30)
         while typing:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if active:
-                        if event.key == pygame.K_RETURN:
-                            self.temporalOffset = int(input_text)
-                            typing = False
-                        elif event.key == pygame.K_BACKSPACE:
-                            input_text = input_text[:-1]  # Remove the last character
-                        elif len(input_text) < 2:
-                            input_text += event.unicode  # Add the typed character to the input text
-            if active:
-                menu = pygame.image.load('GUI/GUI principaleInput.png')
-                self.screen.blit(menu, (info.current_w / 2 - 300, info.current_h / 2 - 200))
-            color = (123,141,147) if active else (207,216,220)
+                    if event.key == pygame.K_RETURN:
+                        if input_text != "":
+                            self.temporalOffset = int(input_text) # *60 per i minuti
+                        typing = False
+                    elif event.key == pygame.K_BACKSPACE:
+                        input_text = input_text[:-1]  # Remove the last character
+                    elif len(input_text) < 2 and '0' <= event.unicode <= '9':  # Limita i numeri a 1-9 e due cifre
+                        input_text += event.unicode  # Add the typed character to the input text
+            menu = pygame.image.load('GUI/GUI principaleInput.png')
+            self.screen.blit(menu, (info.current_w / 2 - 300, info.current_h / 2 - 200))
+            color = (123,141,147)
             pygame.draw.rect(self.screen, color, input_rect)
             text_surface = self.font.render(input_text, True, (0,0,0))
-            self.screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+            if len(input_text) == 1:
+                self.screen.blit(text_surface, (input_rect.x + 11, input_rect.y + 6))
+            else:
+                self.screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 6))
             pygame.display.flip()   
 
 
@@ -127,7 +139,7 @@ class MouseMover:
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
     def show_window(self):
-        """Shows the Pygame window (restores the window)."""
+        #Shows the Pygame window (restores the window).
         win32gui.ShowWindow(self.hwnd, win32con.SW_SHOW)
 
 
@@ -147,19 +159,30 @@ class MouseMover:
                 self.initialTime = time.time()
 
 
-    # Image
-    def scaleImage(self):
+    # Cursor
+    def findCursor(self):
+        root = tk.Tk()
+        root.withdraw()  # Nasconde la finestra principale di tkinter
+        
+        # Definisci un percorso relativo, ad esempio nella cartella 'cursors'
+        percorso_relativo = os.path.join(os.getcwd(), 'Cursors')
+
+        self.cursorPath = filedialog.askopenfilename(title="Seleziona un'immagine del cursore", initialdir=percorso_relativo, filetypes=[("Immagini PNG", "*.png")])
+        self.showingCursorSelector = False
+        return self.cursorPath
+
+    def loadCursor(self):
+         # Carica l'immagine del cursore
+        self.cursor= pygame.image.load(self.cursorPath).convert_alpha()  # Carica l'immagine selezionata
+        self.scaleCursor()
+
+    def displayCursor(self):
+        self.screen.blit(self.cursor, (self.mouse_x+10, self.mouse_y))  # Disegna l'immagine del cursore
+
+    def scaleCursor(self):
         dimensioneDesiderata = 100
-        factor = dimensioneDesiderata / self.image.get_width()
-        self.image = pygame.transform.smoothscale_by(self.image, factor)    
-
-    def loadImage(self):
-        # Load the image with transparency
-        self.image = pygame.image.load('image.png').convert_alpha()
-        self.scaleImage()
-
-    def refreshImagePosition(self):
-        self.screen.blit(self.image, (self.mouse_x, self.mouse_y))  # Position above the cursor
+        factor = dimensioneDesiderata / self.cursor.get_width()
+        self.cursor = pygame.transform.smoothscale_by(self.cursor, factor)
 
 
     # Time
@@ -167,7 +190,7 @@ class MouseMover:
         current_time = time.strftime("%H:%M:%S")
         time_surface = self.font.render(current_time, True, (255, 255, 255))  # Text color: white
         shadow_surface = self.font.render(current_time, True, (0, 0, 0))  # Shadow: black
-        text_rect = time_surface.get_rect(center=(self.mouse_x + 50, self.mouse_y - 20))  # 20 pixels above the image
+        text_rect = time_surface.get_rect(center=(self.mouse_x + 60, self.mouse_y - 20))  # 20 pixels above the image
         self.screen.blit(shadow_surface, text_rect.move(2, 2))  # Slightly shifted shadow
         self.screen.blit(time_surface, text_rect)
 
@@ -177,12 +200,10 @@ class MouseMover:
         self.icon.stop()
         self.running = False  # Sets the flag to stop the main loop
 
-    # Function to create the icon image (you can use a .ico or .png file)
     def create_image(self):
-        image = Image.open('favicon-32x32.png').convert('RGBA')  # Use the correct image file path
+        image = Image.open('Utility/favicon-32x32.png').convert('RGBA')  # Use the correct image file path
         return image
 
-    # Function to start the icon in the system tray
     def start_tray(self):
         icon_image = self.create_image()  # Uses the icon created by the function
         self.icon = Icon("test_icon", icon_image, menu=Menu(MenuItem('Apri menu', self.loadMenu), MenuItem('Esci', self.on_quit)))
@@ -221,7 +242,6 @@ class MouseMover:
             self.loadAll()
             self.isInterrupted(self.mouse_x, self.mouse_y)
 
-
     def mouseMoveCircle(self):
         radius = 10
         # Moves the mouse simulating a circle
@@ -237,7 +257,6 @@ class MouseMover:
             self.loadAll()
             self.isInterrupted(self.mouse_x, self.mouse_y)  
 
-
     def isInterrupted(self, lastX, lastY):
         self.refreshMousePosition()
         if self.mouse_x != lastX or self.mouse_y != lastY:
@@ -246,22 +265,33 @@ class MouseMover:
 
     # Running
     def start(self):
-        self.loadImage()
+        self.loadCursor()
         while self.running:
-            clock = pygame.time.Clock()
-            self.screen.fill(self.key_color)
-            self.handleQuitEvent()
-            self.mouseController()
-            self.displayMenu()
-            self.loadAll()
-            clock.tick(60)
+            if self.showingCursorSelector:
+                self.refreshScreen()
+                self.cursorPath = self.findCursor()  # Fai scegliere un file all'utente
+                if self.cursorPath:  # Se il percorso è valido
+                    self.loadCursor()
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                clock = pygame.time.Clock()
+                self.screen.fill(self.key_color)
+                self.handleQuitEvent()
+                self.mouseController()
+                self.displayMenu()
+                self.loadAll()
+                clock.tick(60)
+
+    def refreshScreen(self):
+        self.screen.fill(self.key_color)
+        pygame.display.flip()
 
     def loadAll(self):
         if not self.displayingMenu:
             self.screen.fill(self.key_color)
-            self.refreshImagePosition()
-            self.loadTime()
             self.refreshMousePosition()
+            self.displayCursor()
+            self.loadTime()         
         self.setToForeground()
         pygame.display.flip()
 
