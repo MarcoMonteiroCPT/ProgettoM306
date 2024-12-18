@@ -1,1 +1,0 @@
-Cambiare l'offset del programma da secondi a minuti

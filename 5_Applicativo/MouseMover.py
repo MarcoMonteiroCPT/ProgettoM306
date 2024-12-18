@@ -67,7 +67,6 @@ class MouseMover:
 
     # Menu
     def loadMenu(self):
-        self.show_window()
         self.displayingMenu = True
         self.displayMenu()    
     
@@ -111,7 +110,7 @@ class MouseMover:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         if input_text != "":
-                            self.temporalOffset = int(input_text) # *60 per i minuti
+                            self.temporalOffset = int(input_text)
                         typing = False
                     elif event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]  # Remove the last character
@@ -134,13 +133,6 @@ class MouseMover:
         # Hides the window icon from the taskbar without hiding the window
         # Sets the window as "ToolWindow" (prevents the icon from appearing in the taskbar)
         win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_TOOLWINDOW)
-        
-        # Sets the window as "topmost" to prevent it from going behind other windows
-        win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
-
-    def show_window(self):
-        #Shows the Pygame window (restores the window).
-        win32gui.ShowWindow(self.hwnd, win32con.SW_SHOW)
 
 
     # Mouse
@@ -152,7 +144,7 @@ class MouseMover:
             if self.initialPosition != pyautogui.position():
                 self.initialPosition = pyautogui.position()
                 self.initialTime = time.time()
-            elif time.time() - self.initialTime > self.temporalOffset:
+            elif time.time() - self.initialTime > self.temporalOffset*60:# Togliere *60 per i secondi
                 self.runningAnimation = True
                 self.moveMouseSquare()
                 self.mouseMoveCircle()
@@ -206,7 +198,7 @@ class MouseMover:
 
     def start_tray(self):
         icon_image = self.create_image()  # Uses the icon created by the function
-        self.icon = Icon("test_icon", icon_image, menu=Menu(MenuItem('Apri menu', self.loadMenu), MenuItem('Esci', self.on_quit)))
+        self.icon = Icon("test_icon", icon_image, menu=Menu(MenuItem('Apri menu', self.loadMenu), MenuItem('Chiudi', self.on_quit)))
         self.icon.run()
 
 
